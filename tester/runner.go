@@ -1,23 +1,23 @@
-package policyTester
+package tester
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	 "os"
+	"os"
 	"path"
 	"path/filepath"
-	 "strings"
+	"strings"
 	"testing"
+
 	// "time"
 
 	tfFiles "github.com/gruntwork-io/terratest/modules/files"
-	
+
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/stretchr/testify/require"
 )
 
-//
 type testRunner struct {
 	tfExecPath string
 	config     TestConfig
@@ -49,7 +49,6 @@ func (runner *testRunner) Test(t *testing.T) {
 		t.Log("Tempdir cleanup main")
 		os.RemoveAll(tmpDirSetup)
 	})
-
 
 	setup, err := tfexec.NewTerraform(tmpDirSetup, runner.tfExecPath)
 	setup.SetStdout(os.Stdout)
@@ -94,18 +93,18 @@ func (runner *testRunner) Test(t *testing.T) {
 		t.Run(fmt.Sprint(testCase.Variables), func(t *testing.T) {
 			t.Parallel()
 
-			//make list of vars 
+			//make list of vars
 			testCaseVars := make([]*tfexec.VarOption, 0)
 			testCaseVars = append(testCaseVars, vars...)
 
 			for _, variable := range testCase.Variables {
 				testCaseVars = append(testCaseVars, tfexec.Var(fmt.Sprintf("%s=%v", variable.Key, variable.Value)))
 			}
-			
+
 			//temp
-			temp := make([]tfexec.VarOption,0)
-			for  _,p := range testCaseVars{
-				temp = append(temp,*p)
+			temp := make([]tfexec.VarOption, 0)
+			for _, p := range testCaseVars {
+				temp = append(temp, *p)
 			}
 			t.Log(temp)
 
@@ -148,7 +147,7 @@ func (runner *testRunner) Test(t *testing.T) {
 
 			if err != nil {
 				t.Log("*****************************")
-				t.Log("Error in:",testCase)
+				t.Log("Error in:", testCase)
 				t.Log(err)
 				t.Log(err.Error())
 				errString := err.Error()

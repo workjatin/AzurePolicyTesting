@@ -1,4 +1,4 @@
-package policyTester
+package tester
 
 import (
 	"bufio"
@@ -107,16 +107,37 @@ func (TestDeps) StopTestLog() error {
 // SetPanicOnExit0 tells the os package whether to panic on os.Exit(0).
 func (TestDeps) SetPanicOnExit0(bool) {}
 
-func (TestDeps) CoordinateFuzzing(time.Duration, int64, time.Duration, int64, int, []struct{Parent string; Path string; Data []byte; Values []any; Generation int; IsSeed bool}, []reflect.Type, string, string)(err error) {
+func (TestDeps) CoordinateFuzzing(time.Duration, int64, time.Duration, int64, int, []struct {
+	Parent     string
+	Path       string
+	Data       []byte
+	Values     []any
+	Generation int
+	IsSeed     bool
+}, []reflect.Type, string, string) (err error) {
 	return err
 }
 
-func (TestDeps) RunFuzzWorker(func(struct{Parent string; Path string; Data []byte; Values []any; Generation int; IsSeed bool}) error) error {
+func (TestDeps) RunFuzzWorker(func(struct {
+	Parent     string
+	Path       string
+	Data       []byte
+	Values     []any
+	Generation int
+	IsSeed     bool
+}) error) error {
 	return nil
 }
 
-func (TestDeps) ReadCorpus(string, []reflect.Type) ([]struct{Parent string; Path string; Data []byte; Values []any; Generation int; IsSeed bool}, error){
-	return nil,nil
+func (TestDeps) ReadCorpus(string, []reflect.Type) ([]struct {
+	Parent     string
+	Path       string
+	Data       []byte
+	Values     []any
+	Generation int
+	IsSeed     bool
+}, error) {
+	return nil, nil
 }
 
 func (TestDeps) CheckCorpus(vals []any, types []reflect.Type) error {

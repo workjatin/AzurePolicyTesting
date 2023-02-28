@@ -1,4 +1,4 @@
-package policyTester
+package tester
 
 import (
 	"context"   //Package context defines the Context typewhich carries deadlines, cancellation signals, and other request-scoped values across API boundaries and between processes.
@@ -37,7 +37,7 @@ func RunGoTest(configPath string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("error finding version: %w", err)
 	}
-	v0_14_0 := version.Must(v1,err)
+	v0_14_0 := version.Must(v1, err)
 	tfExecPath, err := i.Ensure(context.Background(), []src.Source{
 		&fs.ExactVersion{
 			Product: product.Terraform,
@@ -67,11 +67,11 @@ func RunGoTest(configPath string) (int, error) {
 			if err != nil {
 				continue
 			}
-			
+
 			defer yamlFile.Close() //close file once all other statements exicute in the block
-			
+
 			byteValue, _ := ioutil.ReadAll(yamlFile)
-			
+
 			var testConfig TestConfig                                      // making a var to store the input forom the .yaml file
 			if err := yaml.Unmarshal(byteValue, &testConfig); err != nil { // unpack the ymal file into the testConfig
 				log.Printf("Could not unmarshal file %s: %v", file.Name(), err)
@@ -82,8 +82,6 @@ func RunGoTest(configPath string) (int, error) {
 			//fmt.Printf("config\n%+v\n",testConfig)
 		}
 	}
-
-
 
 	//make slice of type nternalTest
 	// type InternalTest struct {
@@ -99,7 +97,6 @@ func RunGoTest(configPath string) (int, error) {
 		})
 	}
 
-	
 	//runs all tests cases without passing go test commanad
 	t := new(TestDeps)
 	return testing.MainStart(t, tests, []testing.InternalBenchmark{}, []testing.InternalFuzzTarget{}, []testing.InternalExample{}).Run(), nil
