@@ -1,15 +1,14 @@
-package tester
+package policyTester
 
 //defines all the structs used
 
 // test cases
 type TestConfig struct {
-	Name  string           `yaml:"name"`
-	Cases []PolicyTestCase `yaml:"cases"`
-	//Effect       string           `yaml:"effect"`
-	TerraformDir string `yaml:"terraformDir"`
-	ErrorMessage string `yaml:"errorMessage"`
-	ErrorCode    string `yaml:"errorCode"`
+	Name         string           `yaml:"name"`
+	Cases        []PolicyTestCase `yaml:"cases"`
+	TerraformDir string           `yaml:"terraformDir"`
+	ErrorMessage string           `yaml:"errorMessage"`
+	ErrorCode    string           `yaml:"errorCode"`
 }
 
 type PolicyTestCase struct {

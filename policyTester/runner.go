@@ -1,16 +1,16 @@
-package tester
+package policyTester
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	// "time"
+	"time"
 
 	tfFiles "github.com/gruntwork-io/terratest/modules/files"
 
@@ -41,19 +41,10 @@ func (runner *testRunner) Test(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	//fmt.Printf("tfexce path:%s", runner.tfExecPath)
-	fmt.Printf("DIR %s", runner.config.TerraformDir)
-	tmpDirSetup, err := tfFiles.CopyTerraformFolderToTemp(filepath.Join(runner.config.TerraformDir, "setup"), "*")
-	require.NoError(t, err, "Create temp dir for setup")
 
-	t.Cleanup(func() {
-		t.Log("Tempdir cleanup main")
-		os.RemoveAll(tmpDirSetup)
-	})
-
-	setup, err := tfexec.NewTerraform(tmpDirSetup, runner.tfExecPath)
-	setup.SetStdout(os.Stdout)
-	setup.SetStderr(os.Stderr)
-	//fmt.Printf("Setup\n%+v\n",setup)
+	setup, err := tfexec.NewTerraform(filepath.Join(runner.config.TerraformDir, "setup"), runner.tfExecPath)
+	// setup.SetStdout(os.Stdout)
+	// setup.SetStderr(os.Stderr)
 	require.NoError(t, err, "setup: new Terraform object")
 	require.NoErrorf(t, setup.Init(ctx, tfexec.Upgrade(false), tfexec.Reconfigure(true)), "setup: Init command. Directory: %s", setup.WorkingDir())
 	//performs cleanup after all tests are compleated
@@ -64,8 +55,6 @@ func (runner *testRunner) Test(t *testing.T) {
 		}
 	})
 
-	//_, err := setup.Plan(context.Background(), out)
-	//t.FailNow()
 	require.NoError(t, setup.Apply(ctx, tfexec.Lock(false)), "setup: error running Apply command")
 
 	outputs, err := setup.Output(ctx)
@@ -85,7 +74,7 @@ func (runner *testRunner) Test(t *testing.T) {
 		vars = append(vars, tfexec.Var(fmt.Sprintf("%s=%v", key, value)))
 	}
 
-	//time.Sleep(30 * time.Minute) // Time for the policy to be active
+	time.Sleep(5 * time.Minute) // Time for the policy to be active
 
 	for _, c := range runner.config.Cases {
 		testCase := c
@@ -106,7 +95,7 @@ func (runner *testRunner) Test(t *testing.T) {
 			for _, p := range testCaseVars {
 				temp = append(temp, *p)
 			}
-			t.Log(temp)
+			t.Log("vars", temp)
 
 			tmpDir, err := tfFiles.CopyTerraformFolderToTemp(runner.config.TerraformDir, "*")
 			require.NoError(t, err, "Create temp dir for test")
@@ -118,8 +107,10 @@ func (runner *testRunner) Test(t *testing.T) {
 
 			tf, err := tfexec.NewTerraform(tmpDir, runner.tfExecPath)
 			require.NoError(t, err, "New Terraform object")
-			tf.SetStdout(os.Stdout)
-			tf.SetStderr(os.Stderr)
+			//tf.SetStdout(os.Stdout)
+			var buf1 strings.Builder
+			w := io.MultiWriter(&buf1)
+			tf.SetStderr(w)
 
 			require.NoError(t, tf.Init(ctx, tfexec.Upgrade(false), tfexec.Reconfigure(true)), "Init command")
 
@@ -140,28 +131,22 @@ func (runner *testRunner) Test(t *testing.T) {
 			}
 
 			applyOptions = append(applyOptions, tfexec.Lock(false))
-			err = tf.Apply(
+			applyErr := tf.Apply(
 				ctx,
 				applyOptions...,
 			)
-
-			if err != nil {
-				t.Log("*****************************")
-				t.Log("Error in:", testCase)
-				t.Log(err)
-				t.Log(err.Error())
-				errString := err.Error()
+			t.Log("test :", testCase, ":", applyErr, ":", buf1.String())
+			if applyErr != nil {
 				if testCase.ErrorExpected {
-					t.Log("Error Expected")
 					matches := 0
 					for _, part := range errorMessagesExpectedParts {
-						if strings.Contains(strings.ToLower(errString), strings.ToLower(part)) {
+						if strings.Contains(strings.ToLower(buf1.String()), strings.ToLower(part)) {
 							matches++
 						}
 					}
-					require.Equalf(t, len(errorMessagesExpectedParts), matches, "deployment failed for an unexpected reason: %s", errString)
+					require.Equalf(t, len(errorMessagesExpectedParts), matches, "deployment failed for an unexpected reason: %s", buf1.String())
 				} else {
-					require.FailNow(t, "deployment failed for an unexpected reason", errString)
+					require.FailNow(t, "deployment failed for an unexpected reason", buf1.String())
 				}
 			} else if testCase.ErrorExpected {
 				require.FailNowf(t, "values should be FORBIDDEN by policy", "%s", testCase.Variables)
