@@ -1,22 +1,21 @@
 package policyTester
 
 import (
-	"context"   //Package context defines the Context typewhich carries deadlines, cancellation signals, and other request-scoped values across API boundaries and between processes.
-	"fmt"       //Package fmt implements formatted I/O with functions analogous to C's printf and scanf
-	"io/ioutil" //Package ioutil implements some I/O utility functions, same functionality is now provided by package io or package os
+	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath" //Package filepath implements utility routines for manipulating filename paths in a way compatible with the target operating system-defined file paths.
+	"path/filepath"
 	"testing"
 
-	//"github.com/goproxy0/go/src/testing/internal/testdeps"
 	version "github.com/hashicorp/go-version"
 	install "github.com/hashicorp/hc-install"
 	"github.com/hashicorp/hc-install/fs"
 	"github.com/hashicorp/hc-install/product"
 	"github.com/hashicorp/hc-install/releases"
 	"github.com/hashicorp/hc-install/src"
-	"gopkg.in/yaml.v2" // helps easily encode and decode YAML values
+	"gopkg.in/yaml.v2"
 )
 
 func RunGoTest(configPath string) (int, error) {
@@ -37,7 +36,7 @@ func RunGoTest(configPath string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("error finding version: %w", err)
 	}
-	v0_14_0 := version.Must(v1,err)
+	v0_14_0 := version.Must(v1, err)
 	tfExecPath, err := i.Ensure(context.Background(), []src.Source{
 		&fs.ExactVersion{
 			Product: product.Terraform,
@@ -61,35 +60,29 @@ func RunGoTest(configPath string) (int, error) {
 	//create a slice of pointer type Struct testRunner
 	runners := make([]*testRunner, 0)
 
-	for _, file := range files { //for all files in config path(Test)
-		if filepath.Ext(file.Name()) == ".yaml" { //check if extention is yaml
-			yamlFile, err := os.Open(filepath.Join(configPath, file.Name())) //open .yaml to read
+	// unpack the ymal file into the testConfig
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".yaml" {
+			yamlFile, err := os.Open(filepath.Join(configPath, file.Name()))
 			if err != nil {
 				continue
 			}
-			
-			defer yamlFile.Close() //close file once all other statements exicute in the block
-			
+
+			defer yamlFile.Close()
+
 			byteValue, _ := ioutil.ReadAll(yamlFile)
-			
-			var testConfig TestConfig                                      // making a var to store the input forom the .yaml file
-			if err := yaml.Unmarshal(byteValue, &testConfig); err != nil { // unpack the ymal file into the testConfig
+
+			var testConfig TestConfig
+			if err := yaml.Unmarshal(byteValue, &testConfig); err != nil {
 				log.Printf("Could not unmarshal file %s: %v", file.Name(), err)
 				continue
 			}
-
-			runners = append(runners, newTestRunner(tfExecPath, configPath, testConfig)) // adds current test config to runners list
-			//fmt.Printf("config\n%+v\n",testConfig)
+			// adds current test config to runners list
+			runners = append(runners, newTestRunner(tfExecPath, configPath, testConfig))
 		}
 	}
 
-
-
-	//make slice of type nternalTest
-	// type InternalTest struct {
-	// 	Name string
-	// 	F    func(*T)
-	// }
+	//make slice of type internalTest
 	tests := make([]testing.InternalTest, 0)
 
 	for _, runner := range runners {
@@ -99,7 +92,6 @@ func RunGoTest(configPath string) (int, error) {
 		})
 	}
 
-	
 	//runs all tests cases without passing go test commanad
 	t := new(TestDeps)
 	return testing.MainStart(t, tests, []testing.InternalBenchmark{}, []testing.InternalFuzzTarget{}, []testing.InternalExample{}).Run(), nil

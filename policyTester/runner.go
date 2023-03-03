@@ -36,29 +36,30 @@ func newTestRunner(tfExecPath, configPath string, config TestConfig) *testRunner
 
 func (runner *testRunner) Test(t *testing.T) {
 
-	//this function contains testing logic
+	//Builds setup env and runs test on each case
 
 	t.Parallel()
 	ctx := context.Background()
-	//fmt.Printf("tfexce path:%s", runner.tfExecPath)
-
 	setup, err := tfexec.NewTerraform(filepath.Join(runner.config.TerraformDir, "setup"), runner.tfExecPath)
 	// setup.SetStdout(os.Stdout)
 	// setup.SetStderr(os.Stderr)
+	var buf strings.Builder
+	wr := io.MultiWriter(&buf)
+	setup.SetStderr(wr)
 	require.NoError(t, err, "setup: new Terraform object")
 	require.NoErrorf(t, setup.Init(ctx, tfexec.Upgrade(false), tfexec.Reconfigure(true)), "setup: Init command. Directory: %s", setup.WorkingDir())
 	//performs cleanup after all tests are compleated
 	t.Cleanup(func() {
-		t.Log("destroy cleanup main")
 		if err := setup.Destroy(ctx); err != nil {
-			t.Logf("Destroy Setup failed: %s", err.Error())
+			t.Logf("Destroy Setup failed: \n %s", buf.String())
 		}
 	})
 
-	require.NoError(t, setup.Apply(ctx, tfexec.Lock(false)), "setup: error running Apply command")
+	require.NoError(t, setup.Apply(ctx, tfexec.Lock(false)), "setup: error running Apply command\n %s", buf.String())
+	t.Log("Setup Apply Success!")
 
 	outputs, err := setup.Output(ctx)
-	require.NoError(t, err, "setup: error running Output command")
+	require.NoError(t, err, "setup: error running Output command\n %s", buf.String())
 
 	errorMessagesExpectedParts := []string{
 		runner.config.ErrorMessage,
@@ -73,7 +74,7 @@ func (runner *testRunner) Test(t *testing.T) {
 
 		vars = append(vars, tfexec.Var(fmt.Sprintf("%s=%v", key, value)))
 	}
-
+	t.Log("Sleep for 5")
 	time.Sleep(5 * time.Minute) // Time for the policy to be active
 
 	for _, c := range runner.config.Cases {
@@ -115,7 +116,6 @@ func (runner *testRunner) Test(t *testing.T) {
 			require.NoError(t, tf.Init(ctx, tfexec.Upgrade(false), tfexec.Reconfigure(true)), "Init command")
 
 			t.Cleanup(func() {
-				t.Log("destroy cleanup")
 				destroyOptions := make([]tfexec.DestroyOption, 0)
 				for _, variable := range testCaseVars {
 					destroyOptions = append(destroyOptions, variable)
@@ -135,7 +135,6 @@ func (runner *testRunner) Test(t *testing.T) {
 				ctx,
 				applyOptions...,
 			)
-			t.Log("test :", testCase, ":", applyErr, ":", buf1.String())
 			if applyErr != nil {
 				if testCase.ErrorExpected {
 					matches := 0
@@ -144,9 +143,9 @@ func (runner *testRunner) Test(t *testing.T) {
 							matches++
 						}
 					}
-					require.Equalf(t, len(errorMessagesExpectedParts), matches, "deployment failed for an unexpected reason: %s", buf1.String())
+					require.Equalf(t, len(errorMessagesExpectedParts), matches, "deployment failed for an unexpected reason:\n %s", buf1.String())
 				} else {
-					require.FailNow(t, "deployment failed for an unexpected reason", buf1.String())
+					require.FailNow(t, "deployment failed for an unexpected reason:\n", buf1.String())
 				}
 			} else if testCase.ErrorExpected {
 				require.FailNowf(t, "values should be FORBIDDEN by policy", "%s", testCase.Variables)

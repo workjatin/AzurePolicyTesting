@@ -2,11 +2,7 @@ package policyTester
 
 import (
 	"bufio"
-	//"context"
-	//"testing"
 	"io"
-	//"os"
-	//"os/signal"
 	"reflect"
 	"regexp"
 	"runtime/pprof"
@@ -54,9 +50,8 @@ func (TestDeps) ImportPath() string {
 
 // testLog implements testlog.Interface, logging actions by package os.
 type testLog struct {
-	mu  sync.Mutex
-	w   *bufio.Writer
-	set bool
+	mu sync.Mutex
+	w  *bufio.Writer
 }
 
 func (l *testLog) Getenv(key string) {
@@ -104,7 +99,6 @@ func (TestDeps) StopTestLog() error {
 	return err
 }
 
-// SetPanicOnExit0 tells the os package whether to panic on os.Exit(0).
 func (TestDeps) SetPanicOnExit0(bool) {}
 
 func (TestDeps) CoordinateFuzzing(time.Duration, int64, time.Duration, int64, int, []struct {
